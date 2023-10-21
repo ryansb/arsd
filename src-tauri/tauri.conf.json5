@@ -1,14 +1,14 @@
 {
   "build": {
-    "beforeDevCommand": "yarn dev",
-    "beforeBuildCommand": "yarn build",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
     "devPath": "http://localhost:1420",
     "distDir": "../dist",
     "withGlobalTauri": false
   },
   "package": {
     "productName": "arsd",
-    "version": "0.0.0"
+    "version": "0.0.1"
   },
   "tauri": {
     "allowlist": {
@@ -16,6 +16,20 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "fs": {
+        "all": false,
+        "scope": [
+          "~/.aws/config",
+          "$CONFIG/*",
+          "$APPDATA/*",
+          "$APPLOG/*"
+        ],
+        "exists": true,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "createDir": true
       },
       "window": {
         "all": false,
@@ -49,19 +63,20 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "arsd - AWS Role Speed Demon",
-        "width": 800,
-        "height": 1200
+        "title": "arsd - AWS Role Speed Dial",
+        "width": 900,
+        "height": 1200,
+        "label": "main",
+        "visible": false
       }
     ],
     "cli": {
-      "description": "arsd - AWS Role Speed Demon",
+      "description": "arsd - AWS Role Speed Dial",
       "subcommands": {
         "cs": {
           "description": "Open a session in the system browser"
         }
       }
-
     }
   }
 }

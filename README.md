@@ -1,4 +1,23 @@
-# Tauri + Vue 3 + TypeScript
+# arsd - AWS Role Speed Dial
+
+A desktop app to manage sessions and roles for one or more AWS SSO domains.
+
+## Configuration
+
+Configs are in the os-appropriate application configuration dir. On MacOS this is `/Users/your.name/Library/Application Support/io.rsb.arsd`. The desktop app automatically creates a `config.yaml` file with base values.
+
+Below, see an example with one partition set up with an Amazon Web Services Identity and Access Management Identity Center (formerly known as AWS SSO). You will need your start URL, account ID, and region of the IAM Identity Center install.
+
+```yaml
+application:
+  timeout_ms: 2000
+partitions:
+- start_url: https://yourcloud.awsapps.com/start#
+  region: us-west-2
+  account_id: 999888777666
+```
+
+# Development Environment
 
 This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
 
