@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "arsd",
-    "version": "0.0.1"
+    "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {
@@ -66,6 +66,8 @@
         "title": "arsd - AWS Role Speed Dial",
         "width": 900,
         "height": 1200,
+        "minWidth": 480,
+        "minHeight": 600,
         "label": "main",
         "visible": false
       }

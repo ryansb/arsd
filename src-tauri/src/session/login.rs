@@ -1,10 +1,13 @@
 use aws_config;
 use aws_sdk_ssooidc::{self, Error as SsoIdcError};
 use chrono::{serde::ts_milliseconds, DateTime, Utc};
+use tauri::{AppHandle, Manager};
 
-use crate::{configuration::Partition, domain::Storage};
+use crate::configuration::Partition;
+use crate::domain::storage::client_name;
+use crate::{sql, sql::ServiceAccess};
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct ConfirmationInfo {
     pub partition: String,
     pub user_code: String,
@@ -36,15 +39,31 @@ pub enum DeviceAuthState {
     NeedsRefresh(RefreshInfo),
     Success(SuccessInfo),
     Pending,
-    Failure,
 }
 
-pub struct SSOSession {
-    partition: Partition,
-    storage: Storage,
-    oidc: aws_sdk_ssooidc::Client,
+#[derive(Clone, Debug)]
+pub enum Event {
+    RegisterDevice,
+    StartDeviceAuthorization,
+    ConfirmDeviceAuthorization(ConfirmationInfo),
 }
-impl SSOSession {
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum State {
+    Start,                                  // nothing has been checked
+    Registered,                             // non-expired registration is available
+    AwaitingConfirmation(ConfirmationInfo), // a token was requested, but the user has to confirm
+    Ready,                                  // non-expired token is available
+    Failed { message: String },
+}
+
+pub struct SessionState {
+    partition: Partition,
+    app: AppHandle,
+    oidc: aws_sdk_ssooidc::Client,
+    state: State,
+}
+impl SessionState {
     /*
      Event loop for each partition:
      - `authorize_device` emitted by `main` on app start
@@ -52,115 +71,100 @@ impl SSOSession {
      - `partition_state` emitted by SSOSession when the partition state changes
     */
     pub async fn new(
-        storage: Storage,
+        app: AppHandle,
         partition: Partition,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         log::info!("starting login check");
         let config = aws_config::load_from_env().await;
         Ok(Self {
             partition,
-            storage,
+            app,
+            state: State::Start,
             oidc: aws_sdk_ssooidc::Client::new(&config),
         })
     }
 
-    pub async fn confirm_device_registration(
-        &self,
-        device_code: String,
-    ) -> Result<DeviceAuthState, String> {
-        if let Some(registration) = self.storage.valid_registration(self.partition.clone()) {
-            let req = self
-                .oidc
-                .create_token()
-                .client_id(registration.client_id)
-                .client_secret(registration.client_secret)
-                .device_code(device_code.clone())
-                .grant_type(String::from("urn:ietf:params:oauth:grant-type:device_code"));
-            log::info!(
-                "Sending CreateToken request: client_id={:?}, client_secret={:?}, device_code={:?}, code={:?}, grant_type={:?}, refresh_token={:?}, scope={:?}",
-                req.get_client_id(),
-                req.get_client_secret().is_some(),
-                req.get_device_code(),
-                req.get_code(),
-                req.get_grant_type(),
-                req.get_refresh_token(),
-                req.get_scope()
-            );
-            match req.send().await.map_err(SsoIdcError::from) {
-                Ok(resp) => {
-                    log::info!("Got response: {:?}", resp);
-                    let token = self.storage.token(
-                        self.partition.clone(),
-                        resp.access_token().unwrap().to_string(),
-                        resp.expires_in().try_into().unwrap(),
-                        resp.token_type().unwrap().to_string(),
-                    );
-                    return Ok(DeviceAuthState::Success(SuccessInfo {
-                        expires_at: token.expires_at,
-                    }));
-                }
-                Err(SsoIdcError::AuthorizationPendingException(e)) => {
-                    log::info!("Auth Pending: {:?}", e);
-                    return Ok(DeviceAuthState::Pending);
-                }
-                Err(SsoIdcError::SlowDownException(e)) => {
-                    log::info!("Slow down: {:?}", e);
-                    return Ok(DeviceAuthState::Pending);
-                }
-                Err(e) => {
-                    let message = format!("Error confirming device registration: {:?}", e);
-                    log::warn!("{}", message);
-                    return Err(message);
-                }
-            }
-        }
-        Err("No registration found".to_string())
-    }
-
-    pub async fn authorize_device(&self) -> Result<DeviceAuthState, Box<dyn std::error::Error>> {
-        /*
-          1. check locally for a client ID/client secret
-          1a. if there is none, send a ssooidc::RegisterClient call
-          2. check locally for a device bearer token and refresh token
-          2a. check expiry of bearer token
-          2b. exit with NeedsRefresh
-          3. if no local token, use ssooidc::StartDeviceAuthorization to get a URL for the user to visit and confirm
-          3a. exit with NeedsConfirmation
-        */
-        let req = self
-            .oidc
-            .register_client()
-            .client_name(self.storage.client_name())
-            //.set_scopes(Some(self.partition.scopes()))
-            .client_type("public");
-
-        let registration = match self.storage.valid_registration(self.partition.clone()) {
-            None => {
-                log::info!(
-                    "sending req for new {} secret name={:?}, type={:?}, scopes={:?}",
-                    self.partition.slug(),
-                    req.get_client_name(),
-                    req.get_client_type(),
-                    req.get_scopes()
-                );
-                let r = req.send().await?;
-                self.storage.register(
-                    self.partition.clone(),
-                    r.client_id().unwrap().to_string(),
-                    r.client_id_issued_at(),
-                    r.client_secret().unwrap().to_string(),
-                    r.client_secret_expires_at(),
-                )
-            }
-            Some(registration) => {
-                log::info!("registration already valid");
-                registration
-            }
+    pub async fn next(&mut self, event: Event) -> State {
+        if self
+            .app
+            .db(|db| sql::models::Token::find(db, self.partition.slug()))
+            .unwrap()
+            .is_some()
+        {
+            self.state = State::Ready;
+            log::info!("found valid token, short-circuiting login");
+            return State::Ready;
         };
 
-        match self.storage.valid_token(self.partition.clone()) {
-            None => {
+        match (self.state.clone(), event.clone()) {
+            (State::Start, Event::RegisterDevice) => {
+                if self
+                    .app
+                    .db(|db| sql::models::Registration::find(db, self.partition.slug()))
+                    .unwrap()
+                    .is_none()
+                {
+                    let req = self
+                        .oidc
+                        .register_client()
+                        .client_name(client_name())
+                        .client_type("public");
+                    log::info!(
+                        "sending req for new {} secret name={:?}, type={:?}, scopes={:?}",
+                        self.partition.slug(),
+                        req.get_client_name(),
+                        req.get_client_type(),
+                        req.get_scopes()
+                    );
+                    let r = req.send().await.expect("Error registering client");
+                    self.app.db(|db| {
+                        let m = sql::models::Registration {
+                            partition: self.partition.slug(),
+                            client_id: r.client_id().unwrap().to_string(),
+                            client_secret: r.client_secret().unwrap().to_string(),
+                            issued_at: DateTime::<Utc>::from_timestamp(r.client_id_issued_at(), 0)
+                                .expect("client ID issue timestamp should parse"),
+                            expires_at: DateTime::<Utc>::from_timestamp(
+                                r.client_secret_expires_at(),
+                                0,
+                            )
+                            .expect("client ID expiry timestamp should parse"),
+                        };
+                        m.insert(db).unwrap()
+                    });
+                };
+                self.state = State::Registered;
+                self.app
+                    .emit_all("needs_confirmation", self.partition.slug())
+                    .unwrap();
+                State::Registered
+                // learn what boxing is if we want this state machine to be recursive
+                // self.next(Event::StartDeviceAuthorization).await
+            }
+            (State::Registered, Event::StartDeviceAuthorization) => {
+                if self
+                    .app
+                    .db(|db| sql::models::Token::find(db, self.partition.slug()))
+                    .unwrap()
+                    .is_some()
+                {
+                    self.state = State::Ready;
+                    return State::Ready;
+                };
+
                 log::info!("no valid token found");
+                let registration = match self
+                    .app
+                    .db(|db| sql::models::Registration::find(db, self.partition.slug()))
+                    .unwrap()
+                {
+                    None => {
+                        log::warn!("no registration found, returning to start");
+                        self.state = State::Start;
+                        return State::Start;
+                    }
+                    Some(r) => r,
+                };
                 let req = self
                     .oidc
                     .start_device_authorization()
@@ -174,23 +178,96 @@ impl SSOSession {
                     req.get_client_secret(),
                     req.get_start_url(),
                 );
-                let resp = req.send().await?;
+                let confirmation = match req.send().await {
+                    Err(e) => {
+                        log::error!(
+                            "Failed to start device auth for {}: {:?}",
+                            self.partition.slug(),
+                            e
+                        );
+                        return State::Failed {
+                            message: "Failed to start device auth".to_string(),
+                        };
+                    }
+                    Ok(resp) => ConfirmationInfo {
+                        partition: self.partition.slug(),
+                        user_code: resp.user_code().unwrap().to_string(),
+                        device_code: resp.device_code().unwrap().to_string(),
+                        expires_at: Utc::now()
+                            + chrono::Duration::seconds(resp.expires_in().into()),
+                        confirmation_url: resp.verification_uri_complete().unwrap().to_string(),
+                        polling_interval: resp.interval(),
+                    },
+                };
 
-                Ok(DeviceAuthState::NeedsConfirmation(ConfirmationInfo {
-                    partition: self.partition.slug(),
-                    user_code: resp.user_code().unwrap().to_string(),
-                    device_code: resp.device_code().unwrap().to_string(),
-                    expires_at: Utc::now() + chrono::Duration::seconds(resp.expires_in().into()),
-                    confirmation_url: resp.verification_uri_complete().unwrap().to_string(),
-                    polling_interval: resp.interval(),
-                }))
+                self.state = State::AwaitingConfirmation(confirmation.clone());
+                State::AwaitingConfirmation(confirmation)
             }
-            Some(token) => {
-                log::info!("found valid token");
-                Ok(DeviceAuthState::Success(SuccessInfo {
-                    expires_at: token.expires_at,
-                }))
+            (_, Event::ConfirmDeviceAuthorization(cc)) => {
+                let registration = match self
+                    .app
+                    .db(|db| sql::models::Registration::find(db, self.partition.slug()))
+                    .unwrap()
+                {
+                    None => {
+                        log::warn!("no registration found, returning to start");
+                        self.state = State::Start;
+                        return State::Start;
+                    }
+                    Some(r) => r,
+                };
+
+                let req = self
+                    .oidc
+                    .create_token()
+                    .client_id(registration.client_id)
+                    .client_secret(registration.client_secret)
+                    .device_code(cc.device_code.clone())
+                    .grant_type(String::from("urn:ietf:params:oauth:grant-type:device_code"));
+                log::info!(
+                "Sending CreateToken request: client_id={:?}, client_secret={:?}, device_code={:?}, code={:?}, grant_type={:?}, refresh_token={:?}, scope={:?}",
+                req.get_client_id(),
+                req.get_client_secret().is_some(),
+                req.get_device_code(),
+                req.get_code(),
+                req.get_grant_type(),
+                req.get_refresh_token(),
+                req.get_scope()
+            );
+                match req.send().await.map_err(SsoIdcError::from) {
+                    Ok(resp) => {
+                        log::info!("Got response: {:?}", resp);
+                        self.app.db_mut(|db| {
+                            sql::models::Token {
+                                partition: self.partition.slug(),
+                                token_type: resp.token_type().unwrap().to_string(),
+                                access_token: resp.access_token().unwrap().to_string(),
+                                expires_at: Utc::now()
+                                    + chrono::Duration::seconds(
+                                        resp.expires_in().try_into().unwrap(),
+                                    ),
+                            }
+                            .insert(db)
+                            .unwrap()
+                        });
+                        self.state = State::Ready;
+                        State::Ready
+                    }
+                    Err(SsoIdcError::AuthorizationPendingException(e)) => {
+                        log::info!("Auth Pending: {:?}", e);
+                        State::AwaitingConfirmation(cc)
+                    }
+                    Err(SsoIdcError::SlowDownException(e)) => {
+                        log::info!("Slow down: {:?}", e);
+                        State::AwaitingConfirmation(cc)
+                    }
+                    Err(e) => {
+                        log::error!("Error confirming device registration: {:?}", e);
+                        State::AwaitingConfirmation(cc)
+                    }
+                }
             }
+            _ => todo!("event={:?} is not legal for state={:?}", event, self.state),
         }
     }
 }

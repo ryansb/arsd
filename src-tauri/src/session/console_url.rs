@@ -3,7 +3,7 @@ use serde_json;
 use url::Url;
 
 use super::account;
-use crate::{configuration::Partition, domain::Storage};
+use crate::configuration::Partition;
 
 const AWS_DOMAIN: &str = "aws.amazon.com";
 
@@ -35,11 +35,11 @@ pub async fn get_console_url(
     account_id: String,
     role_name: String,
     partition: Partition,
-    storage: Storage,
+    app: tauri::AppHandle,
 ) -> String {
     // Create a signed URL for AWS console
     // https://docs.aws.amazon.com/IAM/latest/UserGuide/example_sts_Scenario_ConstructFederatedUrl_section.html
-    let credentials = account::get_credentials(partition, role_name, account_id, storage).await;
+    let credentials = account::get_credentials(partition, role_name, account_id, app).await;
     let token = SignInTokenRequestSession {
         session_id: credentials.access_key_id,
         session_key: credentials.secret_access_key,

@@ -2,15 +2,7 @@
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/tauri";
 import SessionState from "./SessionState.vue";
-
-interface Partition {
-    start_url: string
-    slug: string
-    account_id: string
-    region: string
-    status?: string
-    message?: string
-}
+import { Partition } from "../store";
 
 const partitions = ref<Partition[]>([]);
 
@@ -22,7 +14,7 @@ await getPartitions();
 </script>
 
 <template>
-    <div v-for="p in partitions">
+    <div v-for="p in partitions" :key="p.slug">
         <SessionState :partition=p />
     </div>
 </template>

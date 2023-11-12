@@ -1,13 +1,11 @@
 use awsregion::Region;
 use regex::Regex;
-use serde_aux::field_attributes::deserialize_number_from_string;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct Settings {
-    pub application: ApplicationSettings,
     pub path: PathBuf,
     pub partitions: Vec<Partition>,
     pub aliases: Aliases,
@@ -40,7 +38,7 @@ impl Aliases {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Partition {
     pub start_url: String,
     pub account_id: Option<String>,
@@ -72,22 +70,8 @@ impl Partition {
     }
 }
 
-#[derive(serde::Deserialize, Clone, Debug)]
-pub struct ApplicationSettings {
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub timeout_ms: u64,
-}
-
-impl ApplicationSettings {
-    pub fn timeout(&self) -> std::time::Duration {
-        // clamp timeout to 20ms - 30s range
-        std::time::Duration::from_millis(self.timeout_ms.clamp(20, 30_000))
-    }
-}
-
 pub fn get_configuration(file: PathBuf) -> Result<Settings, config::ConfigError> {
     let mut partial = config::Config::builder();
-    partial = partial.set_default("application.timeout_ms", 3000)?;
     if file.is_file() {
         partial = partial.add_source(config::File::from(file.clone()));
     }

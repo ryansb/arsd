@@ -4,19 +4,12 @@ use chrono::{serde::ts_milliseconds, DateTime, Utc};
 
 use crate::{
     configuration::Partition,
-    domain::{AccountInfo, RoleInfo, Storage},
+    domain::{AccountInfo, RoleInfo},
+    sql,
+    sql::ServiceAccess,
 };
 
-pub async fn list_roles(
-    partition: Partition,
-    storage: Storage,
-    account_id: String,
-) -> Vec<RoleInfo> {
-    let token = match storage.valid_token(partition.clone()) {
-        Some(t) => t,
-        None => return vec![],
-    };
-
+pub async fn list_roles(partition: Partition, token: String, account_id: String) -> Vec<RoleInfo> {
     let config = aws_config::load_from_env().await;
     let client = aws_sdk_sso::Client::new(&config);
 
@@ -25,7 +18,7 @@ pub async fn list_roles(
     while tries < 10 {
         let req = client
             .list_account_roles()
-            .access_token(token.access_token.clone())
+            .access_token(token.clone())
             .account_id(account_id.clone());
         match req.send().await.map_err(SsoError::from) {
             Err(SsoError::TooManyRequestsException(e)) => {
@@ -37,7 +30,10 @@ pub async fn list_roles(
                 log::warn!("Failed to get roles in {}: {:?}", account_id.clone(), e);
             }
             Ok(pgn) => match pgn.role_list() {
-                None => {}
+                None => {
+                    log::warn!("No roles found for {}", account_id);
+                    break;
+                }
                 Some(l) => {
                     for role in l {
                         roles.push(RoleInfo {
@@ -63,29 +59,58 @@ pub async fn list_roles(
     roles
 }
 
-pub async fn list_accounts(partition: Partition, storage: Storage) -> Vec<AccountInfo> {
-    let token = match storage.valid_token(partition.clone()) {
+pub async fn list_accounts(partition: Partition, app: tauri::AppHandle) -> Vec<AccountInfo> {
+    let candidates = app
+        .db(|db| sql::models::Account::list(db, partition.slug()))
+        .unwrap();
+    if !candidates.is_empty()
+        // only requery if the data is more than 5 hours old
+        && candidates.iter().map(|a| a.updated_at).min().unwrap()
+            > (Utc::now() - chrono::Duration::hours(5))
+    {
+        log::info!(
+            "early-return accounts for {}: {:?}",
+            partition.slug(),
+            candidates
+                .iter()
+                .map(|a| { a.account_name.clone() })
+                .collect::<Vec<String>>()
+        );
+        return candidates.iter().map(|a| a.as_info()).collect();
+    }
+
+    let token = match app
+        .db(|db| sql::models::Token::find(db, partition.slug()))
+        .unwrap()
+    {
         Some(t) => t,
-        None => return vec![],
+        None => return candidates.iter().map(|a| a.as_info()).collect(),
     };
 
     let config = aws_config::load_from_env().await;
     let client = aws_sdk_sso::Client::new(&config);
 
-    let mut accounts: Vec<AccountInfo> = vec![];
-    let mut resp = client
+    let mut accounts: Vec<sql::models::Account> = vec![];
+    let mut resp = match client
         .list_accounts()
         .access_token(token.access_token.clone())
         .send()
         .await
-        .unwrap();
+    {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("Failed to get accounts in {}: {:?}", partition.slug(), e);
+            return candidates.iter().map(|a| a.as_info()).collect();
+        }
+    };
 
     for l in resp.account_list().unwrap() {
-        accounts.push(AccountInfo {
+        accounts.push(sql::models::Account {
+            partition: partition.slug(),
             account_id: l.account_id.clone().unwrap(),
             account_name: l.account_name.clone().unwrap(),
             email_address: l.email_address.clone().unwrap(),
-            alias: None,
+            updated_at: Utc::now(),
         });
     }
 
@@ -98,16 +123,22 @@ pub async fn list_accounts(partition: Partition, storage: Storage) -> Vec<Accoun
             .await
             .unwrap();
         for l in resp.account_list().unwrap() {
-            accounts.push(AccountInfo {
+            accounts.push(sql::models::Account {
+                partition: partition.slug(),
                 account_id: l.account_id.clone().unwrap(),
                 account_name: l.account_name.clone().unwrap(),
                 email_address: l.email_address.clone().unwrap(),
-                alias: None,
+                updated_at: Utc::now(),
             });
         }
     }
+    app.db(|db| {
+        for a in &accounts {
+            a.insert(db).expect("Failed to insert account in local DB");
+        }
+    });
 
-    log::info!(
+    log::debug!(
         "Found accounts for {}: {:?}",
         partition.slug(),
         accounts
@@ -115,7 +146,7 @@ pub async fn list_accounts(partition: Partition, storage: Storage) -> Vec<Accoun
             .map(|a| { a.account_name.clone() })
             .collect::<Vec<String>>()
     );
-    accounts
+    accounts.iter().map(|a| a.as_info()).collect()
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -131,9 +162,12 @@ pub async fn get_credentials(
     partition: Partition,
     role_name: String,
     account_id: String,
-    storage: Storage,
+    app: tauri::AppHandle,
 ) -> Credentials {
-    let token = match storage.valid_token(partition.clone()) {
+    let token = match app
+        .db(|db| sql::models::Token::find(db, partition.slug()))
+        .unwrap()
+    {
         Some(t) => t,
         None => todo!("handle missing token"),
     };

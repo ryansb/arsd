@@ -1,12 +1,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use arsd::session::login::ConfirmationInfo;
 use tauri::{AppHandle, Manager, State};
-use tauri_plugin_log::{LogTarget, RotationStrategy};
+use tauri_plugin_log::LogTarget;
 
 use arsd::configuration::{get_configuration, Settings};
-use arsd::domain::{AccountInfo, RoleInfo, Storage};
+use arsd::domain::{AccountInfo, RoleInfo};
 use arsd::session::{account, account::Credentials, console_url, events, login};
+use arsd::sql;
+use arsd::sql::ServiceAccess;
 
 #[derive(Clone, serde::Serialize)]
 struct SingletonPayload {
@@ -14,21 +17,29 @@ struct SingletonPayload {
     cwd: String,
 }
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn check_sso_status(settings: State<Settings>) -> String {
-    log::info!("cfg={:?}", settings);
-    format!("cfg={:?}", settings)
+#[derive(serde::Serialize)]
+struct AppDirs {
+    data: String,
+    config: String,
+    config_file: String,
 }
-
 #[tauri::command]
-fn config_path(settings: State<Settings>) -> String {
-    settings.path.to_string_lossy().to_string()
-}
-
-#[tauri::command]
-fn data_path(storage: State<Storage>) -> String {
-    format!("{} -- {}", storage.client_name(), storage.path())
+fn storage_path(app: tauri::AppHandle, settings: State<Settings>) -> AppDirs {
+    AppDirs {
+        data: app
+            .path_resolver()
+            .app_data_dir()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+        config: app
+            .path_resolver()
+            .app_config_dir()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+        config_file: settings.path.to_string_lossy().to_string(),
+    }
 }
 
 #[tauri::command]
@@ -39,12 +50,20 @@ async fn open_web_console(
     partition: String,
     account_id: String,
 ) -> Result<String, String> {
+    app.db_mut(|db| {
+        sql::models::HistoryNew {
+            partition: partition.clone(),
+            account: account_id.clone(),
+            role: role_name.clone(),
+            style: sql::models::AssumeStyle::WebConsole,
+            service: None,
+        }
+        .insert(db)
+    })
+    .unwrap();
     match config.partition(partition) {
         None => todo!("Bad partition"),
-        Some(part) => {
-            let st = Storage::new(app);
-            Ok(console_url::get_console_url(account_id, role_name, part, st).await)
-        }
+        Some(part) => Ok(console_url::get_console_url(account_id, role_name, part, app).await),
     }
 }
 
@@ -54,11 +73,10 @@ async fn list_accounts(
     app: tauri::AppHandle,
     partition: String,
 ) -> Result<Vec<AccountInfo>, String> {
-    match config.partition(partition) {
+    match config.partition(partition.clone()) {
         None => todo!("Bad partition"),
         Some(part) => {
-            let st = Storage::new(app);
-            return Ok(account::list_accounts(part, st)
+            return Ok(account::list_accounts(part, app.clone())
                 .await
                 .iter()
                 .map(|a| AccountInfo {
@@ -66,6 +84,9 @@ async fn list_accounts(
                     account_name: a.account_name.clone(),
                     email_address: a.email_address.clone(),
                     alias: config.aliases.map_account(a.email_address.clone()),
+                    score: app.db(|db| {
+                        sql::models::Account::score(db, partition.clone(), a.account_id.clone())
+                    }),
                 })
                 .collect());
         }
@@ -82,8 +103,50 @@ async fn list_roles_for(
     match config.partition(partition) {
         None => todo!("Bad partition"),
         Some(part) => {
-            let st = Storage::new(app);
-            let roles = account::list_roles(part, st, account_id).await;
+            let extant = app
+                .db(|db| sql::models::Role::list(db, part.slug(), account_id.clone()))
+                .unwrap()
+                .iter()
+                .map(|r| RoleInfo {
+                    role_name: r.role_name.clone(),
+                    alias: Some(config.aliases.map_role(r.role_name.clone())),
+                    account_id: r.account_id.clone(),
+                    partition: r.partition.clone(),
+                })
+                .collect::<Vec<RoleInfo>>();
+            if !extant.is_empty() {
+                log::debug!(
+                    "Found roles for {} in db: {:?}",
+                    account_id.clone(),
+                    extant.len()
+                );
+                return Ok(extant);
+            }
+            let token = match app
+                .db(|db| sql::models::Token::find(db, part.slug()))
+                .unwrap()
+            {
+                None => {
+                    log::warn!("No token found for {}", part.slug());
+                    return Ok(vec![]);
+                }
+                Some(t) => t,
+            };
+            let roles =
+                account::list_roles(part.clone(), token.access_token, account_id.clone()).await;
+            for r in roles.iter() {
+                log::warn!("Inserting role: {:?}", r.clone());
+                app.db_mut(|db| {
+                    sql::models::Role {
+                        partition: part.slug(),
+                        account_id: account_id.clone(),
+                        role_name: r.role_name.clone(),
+                        updated_at: chrono::Utc::now(),
+                    }
+                    .insert(db)
+                })
+                .unwrap();
+            }
 
             return Ok(roles
                 .iter()
@@ -128,24 +191,29 @@ async fn get_credentials_for(
     app: AppHandle,
     config: State<'_, Settings>,
 ) -> Result<Credentials, String> {
+    app.db_mut(|db| {
+        sql::models::HistoryNew {
+            partition: partition.clone(),
+            account: account_id.clone(),
+            role: role_name.clone(),
+            style: sql::models::AssumeStyle::LinuxCopy,
+            service: None,
+        }
+        .insert(db)
+    })
+    .unwrap();
     Ok(account::get_credentials(
         config.partition(partition).unwrap(),
         role_name,
         account_id,
-        Storage::new(app),
+        app,
     )
     .await)
 }
 
-#[derive(serde::Deserialize, Clone)]
-struct TokenCheckEvent {
-    device_code: String,
-    partition: String,
-}
-
 #[tauri::command]
 async fn check_device_token(
-    token_event: TokenCheckEvent,
+    token_event: ConfirmationInfo,
     app: AppHandle,
     config: State<'_, Settings>,
 ) -> Result<String, String> {
@@ -156,27 +224,28 @@ async fn check_device_token(
                 "Checking device token for partition: {:?}",
                 partition.sso_start_url()
             );
-            let sess = login::SSOSession::new(Storage::new(app), partition)
+            let mut sess = login::SessionState::new(app.clone(), partition.clone())
                 .await
                 .unwrap();
             match sess
-                .confirm_device_registration(token_event.device_code.clone())
+                .next(login::Event::ConfirmDeviceAuthorization(token_event))
                 .await
             {
-                Err(e) => Ok(e),
-                Ok(state) => {
-                    log::info!("Device registration done. state: {:?}", state);
-                    match state {
-                        login::DeviceAuthState::NeedsConfirmation(c) => {
-                            log::info!("Needs confirmation: {:?}", c);
-                            Ok(serde_json::to_string(&c).unwrap())
-                        }
-                        login::DeviceAuthState::NeedsRefresh(_) => todo!(),
-                        login::DeviceAuthState::Success(_) => Ok(String::from("Done")),
-                        login::DeviceAuthState::Pending => Ok(String::from("Pending")),
-                        login::DeviceAuthState::Failure => todo!(),
-                    }
+                login::State::AwaitingConfirmation(c) => {
+                    log::info!("check_device_token still awaiting confirmation: {:?}", c);
+                    Ok(String::from("Pending"))
                 }
+                login::State::Ready => {
+                    app.emit_all(
+                        "token_ready",
+                        events::AuthorizeDevice {
+                            partition_name: partition.slug(),
+                        },
+                    )
+                    .unwrap();
+                    Ok(String::from("Done"))
+                }
+                _ => todo!("Handle other states"),
             }
         }
     }
@@ -195,57 +264,70 @@ async fn authorize_device(
         )),
         Some(partition) => {
             log::debug!("Found partition: {:?}", partition.sso_start_url());
-            let sess = login::SSOSession::new(Storage::new(app), partition)
+            let mut sess = login::SessionState::new(app.clone(), partition.clone())
                 .await
                 .unwrap();
-            match sess.authorize_device().await {
-                Ok(r) => match r.clone() {
-                    login::DeviceAuthState::Failure => Err("Auth step failed".to_string()),
-                    login::DeviceAuthState::NeedsConfirmation(c) => {
+            let mut event: login::Event = login::Event::RegisterDevice;
+            loop {
+                let st = sess.next(event.clone()).await;
+                log::info!(
+                    "Stepped state event: {:?} and machine: {:?}",
+                    event.clone(),
+                    st
+                );
+                match st {
+                    login::State::Ready => {
+                        log::info!("Token is ready");
+                        let token = app
+                            .db(|db| sql::models::Token::find(db, partition.slug()).unwrap())
+                            .unwrap();
+                        return Ok(login::DeviceAuthState::Success(login::SuccessInfo {
+                            expires_at: token.expires_at,
+                        }));
+                    }
+                    login::State::Registered => {
+                        log::info!("Device is registered");
+                        event = login::Event::StartDeviceAuthorization;
+                    }
+                    login::State::AwaitingConfirmation(c) => {
                         log::info!("Needs confirmation: {:?}", c);
-                        Ok(r)
+                        return Ok(login::DeviceAuthState::NeedsConfirmation(c));
                     }
-                    login::DeviceAuthState::NeedsRefresh(_) => todo!(),
-                    login::DeviceAuthState::Success(s) => {
-                        log::info!("Token is ready {}", s.expires_at);
-                        Ok(r)
-                    }
-                    login::DeviceAuthState::Pending => todo!(),
-                },
-                Err(e) => Err(format!(
-                    "Error authorizing device for {}: {}",
-                    auth_event.partition_name, e
-                )),
+                    _ => todo!("Handle other states"),
+                }
             }
         }
     }
 }
 
 fn main() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    #[cfg(debug_assertions)]
+    {
+        builder = builder.plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .targets([LogTarget::Stdout, LogTarget::LogDir])
+                .build(),
+        );
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        builder = builder.plugin(
+            tauri_plugin_log::Builder::default()
+                .level(log::LevelFilter::Info)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
+                .targets([LogTarget::LogDir])
+                .build(),
+        );
+    }
+    builder
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
             app.emit_all("single-instance", SingletonPayload { args: argv, cwd })
                 .unwrap();
         }))
-        .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(
-            tauri_plugin_log::Builder::default()
-                .level(log::LevelFilter::Info)
-                .rotation_strategy(RotationStrategy::KeepOne)
-                .targets([LogTarget::LogDir])
-                .build(),
-        )
-        .plugin(
-            tauri_plugin_log::Builder::default()
-                .level(log::LevelFilter::Warn)
-                .rotation_strategy(RotationStrategy::KeepOne)
-                .targets([LogTarget::Stdout])
-                .build(),
-        )
         .setup(|app| {
-            app.manage(Storage::new(app.handle()));
-
             if let Some(config_path) = app.path_resolver().app_config_dir() {
                 if !config_path.is_dir() {
                     // make the config directory if it doesn't exist
@@ -273,7 +355,6 @@ fn main() {
                     panic!("Error loading configuration: {}", e)
                 }
             };
-
             app.manage(config.clone());
 
             app.listen_global("authorize_device", |event| {
@@ -298,6 +379,15 @@ fn main() {
 
             let main_window = app.get_window("main").unwrap();
             let handle = app.app_handle();
+
+            let sql_state = sql::connect::SqlRepo {
+                conn: std::sync::Mutex::new(None),
+            };
+            *sql_state.conn.lock().unwrap() = Some(
+                sql::database::initialize_database(&handle).expect("Database should initialize"),
+            );
+            handle.manage(sql_state);
+
             tauri::async_runtime::spawn(async move {
                 main_window.show().unwrap();
                 #[cfg(debug_assertions)] // for debug builds, open the devtools by default
@@ -335,9 +425,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             authorize_device,
             check_device_token,
-            check_sso_status,
-            config_path,
-            data_path,
+            storage_path,
             get_credentials_for,
             get_partitions,
             list_accounts,
