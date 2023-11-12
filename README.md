@@ -9,17 +9,20 @@ Configs are in the os-appropriate application configuration dir. On MacOS this i
 Below, see an example with one partition set up with an Amazon Web Services Identity and Access Management Identity Center (formerly known as AWS SSO). You will need your start URL, account ID, and region of the IAM Identity Center install.
 
 ```yaml
-application:
-  timeout_ms: 2000
 partitions:
 - start_url: https://yourcloud.awsapps.com/start#
   region: us-west-2
   account_id: 999888777666
+aliases:
+  accounts:
+    "awsadmin+centralbilling@example.zone": payer
+  roles:
+    Annoyingly-Long-Role-Name: Abbrev
 ```
 
 # Development Environment
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+So far this has only ever been developed or tested on MacOS. Godspeed.
 
 ## Recommended IDE Setup
 
@@ -35,5 +38,7 @@ Since TypeScript cannot handle type information for `.vue` imports, they are shi
 You can learn more about Take Over mode [here](https://github.com/johnsoncodehk/volar/discussions/471).
 
 # Credits
+
+[Awsume](https://awsu.me) for inspiring the open-in-console functionality.
 
 Amazon Web Services service icons from [AWS](https://aws.amazon.com/architecture/icons/)
