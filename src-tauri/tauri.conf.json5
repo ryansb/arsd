@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "arsd",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "tauri": {
     "allowlist": {
@@ -79,6 +79,10 @@
           "description": "Open a session in the system browser"
         }
       }
+    },
+    "updater": {
+      "active": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIyNTRFMUEzMDJFRDUzODgKUldTSVUrMENvK0ZVc3ZQenpxMGdyVE0yRXZEMVVCVHRielVsVGtSQ28yamZ0SVdZSGh2c2tjMVMK"
     }
   }
 }
