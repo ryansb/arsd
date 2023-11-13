@@ -69,12 +69,13 @@ pub async fn list_accounts(partition: Partition, app: tauri::AppHandle) -> Vec<A
             > (Utc::now() - chrono::Duration::hours(5))
     {
         log::info!(
-            "early-return accounts for {}: {:?}",
+            "early-return accounts for {}: {}",
             partition.slug(),
             candidates
                 .iter()
                 .map(|a| { a.account_name.clone() })
                 .collect::<Vec<String>>()
+                .join(", ")
         );
         return candidates.iter().map(|a| a.as_info()).collect();
     }

@@ -21,7 +21,7 @@ watch(search, (isShown) => {
 
 <template>
   <VApp>
-    <VAppBar>
+    <VAppBar scroll-behavior="elevate" color="surface">
       <VAppBarNavIcon @click="drawer = !drawer">
         <VIcon>mdi-menu</VIcon>
       </VAppBarNavIcon>

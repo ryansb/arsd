@@ -68,14 +68,10 @@ impl Account {
             .optional()
         {
             Err(e) => {
-                log::warn!("rank failed account {}: {:?}", account_id, e);
-
+                log::warn!("rank failed for account {}: {:?}", account_id, e);
                 None
             }
-            Ok(r) => {
-                log::info!("Got rank for account {}: {:?}", account_id, r);
-                r
-            }
+            Ok(r) => r,
         }
     }
 

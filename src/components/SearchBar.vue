@@ -34,5 +34,5 @@ watch(search, (isShown) => {
         <VIcon>mdi-magnify</VIcon>
     </VAppBarNavIcon>
     <VTextField v-if="search" ref="searchBox" v-model="searchTerms" hide-details placeholder="Search" single-line clearable
-        persistent-clear />
+        color="secondary" persistent-clear />
 </template>
