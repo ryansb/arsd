@@ -28,9 +28,6 @@ watch(search, (isShown) => {
       <SearchBar />
       <VSpacer />
       <SortSelect />
-      <VAppBarNavIcon>
-        <VIcon>mdi-refresh</VIcon>
-      </VAppBarNavIcon>
     </VAppBar>
     <VNavigationDrawer v-model="drawer">
       <VList>
