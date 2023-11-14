@@ -64,12 +64,12 @@ let snackbar = ref(false);
         </VSnackbar>
         <VCardText v-for="role in roles" :key="role.role_name">
             <span>{{ role.alias || role.role_name }}</span>
-            <VBtn rounded="pill" class="float-right mb-2 ml-3"
+            <VBtn color="primary" rounded="pill" class="float-right mb-2 ml-3"
                 @click="openWebConsole(role.role_name, $props.account.account_id, $props.partitionSlug)">
                 <VIcon>mdi-open-in-new</VIcon>
                 <VTooltip activator="parent" location="top" open-delay="500">Open in web console</VTooltip>
             </VBtn>
-            <VBtn rounded="pill" class="float-right mb-2 ml-3"
+            <VBtn color="secondary" rounded="pill" class="float-right mb-2 ml-3"
                 @click="copyCredentialsFor(role.role_name, $props.account.account_id, $props.partitionSlug)">
                 <VIcon>mdi-console</VIcon>
                 <VTooltip activator="parent" location="top" open-delay="300">Copy credentials to clipboard</VTooltip>

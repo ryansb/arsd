@@ -56,7 +56,7 @@
       ]
     },
     "security": {
-      "csp": "default-src 'self' localhost",
+      "csp": "default-src 'self' localhost; style-src 'unsafe-inline' localhost",
       "devCsp": "default-src 'self' localhost"
     },
     "windows": [
