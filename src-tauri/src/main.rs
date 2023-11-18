@@ -94,6 +94,27 @@ async fn list_accounts(
 }
 
 #[tauri::command]
+async fn delete_cache(app: tauri::AppHandle) -> Result<(), String> {
+    let extant = app.db(|db| {
+        db.execute_batch(
+            "BEGIN;
+            DELETE FROM roles WHERE true;
+            DELETE FROM registrations WHERE true;
+            DELETE FROM accounts WHERE true;
+            DELETE FROM tokens WHERE true;
+            COMMIT;",
+        )
+    });
+    match extant {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            log::error!("Failed to delete local data: {:?}", e);
+            Err(String::from("Delete failed"))
+        }
+    }
+}
+
+#[tauri::command]
 async fn list_roles_for(
     config: State<'_, Settings>,
     app: tauri::AppHandle,
@@ -293,6 +314,7 @@ async fn authorize_device(
                         log::info!("Needs confirmation: {:?}", c);
                         return Ok(login::DeviceAuthState::NeedsConfirmation(c));
                     }
+                    login::State::Failed { message } => return Err(message),
                     _ => todo!("Handle other states"),
                 }
             }
@@ -430,7 +452,8 @@ fn main() {
             get_partitions,
             list_accounts,
             list_roles_for,
-            open_web_console
+            open_web_console,
+            delete_cache
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

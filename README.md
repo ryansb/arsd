@@ -2,6 +2,14 @@
 
 A desktop app to manage sessions and roles for one or more AWS SSO domains.
 
+## Feature Wishlist
+
+- Support default heirarchy of roles (prefer readonly, then working, then ...)
+- Allow tagging for environments or other account groupings
+- Dump available roles to AWS config
+- Support credential-process for CLI and SDKs such as CDK/Go SDK V1 that lack native SSO integration
+- Support multiple SSO domains
+
 ## Configuration
 
 Configs are in the os-appropriate application configuration dir. On MacOS this is `/Users/your.name/Library/Application Support/io.rsb.arsd`. The desktop app automatically creates a `config.yaml` file with base values.

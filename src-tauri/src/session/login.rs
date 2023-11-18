@@ -175,8 +175,8 @@ impl SessionState {
                 log::info!(
                     "starting device req id={:?} url={:?} secret={:?}",
                     req.get_client_id(),
-                    req.get_client_secret(),
                     req.get_start_url(),
+                    req.get_client_secret(),
                 );
                 let confirmation = match req.send().await {
                     Err(e) => {

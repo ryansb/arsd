@@ -43,12 +43,19 @@ export enum SortOrder {
     Score = 1
 }
 
+export interface PartitionState {
+    slug: string
+    confirmation?: Confirmation
+    expires_at?: Date
+}
+
 export const useSessionStore = defineStore('session', {
     state: () => ({
         sort: SortOrder.Alphabetical,
         confirmation: undefined as Confirmation | undefined,
         expires_at: undefined as Date | undefined,
         search_term: undefined as string | undefined,
+        partitions: {} as Record<string, PartitionState>,
     }),
     getters: {
         search: (state) => {

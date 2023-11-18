@@ -52,7 +52,7 @@ let snackbar = ref(false);
 </script>
 
 <template>
-    <VCard>
+    <VCard height="100%">
         <VCardTitle>{{ $props.account.alias || $props.account.account_name }}</VCardTitle>
         <VCardSubtitle @click="snackbar = true; writeText($props.account.email_address)">{{ $props.account.email_address }}
         </VCardSubtitle>

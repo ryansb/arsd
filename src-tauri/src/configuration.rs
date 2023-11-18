@@ -85,5 +85,12 @@ pub fn get_configuration(file: PathBuf) -> Result<Settings, config::ConfigError>
         )
         .build()?;
 
-    settings.try_deserialize::<Settings>()
+    let parsed = settings.try_deserialize::<Settings>()?;
+    if parsed.partitions.len() > 1 {
+        panic!(
+            "Sorry, only one partition at a time is supported right now due to UI limitations. \
+            Upvote https://github.com/ryansb/arsd/issues/2 if you need more than one partition."
+        );
+    }
+    Ok(parsed)
 }
