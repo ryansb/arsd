@@ -35,8 +35,10 @@ watch(search, (isShown) => {
                 <Suspense>
                     <SessionToolbar />
                 </Suspense>
-                <SettingsToolbar />
             </VList>
+            <template v-slot:append>
+                <SettingsToolbar />
+            </template>
         </VNavigationDrawer>
         <VMain>
             <VContainer>

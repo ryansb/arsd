@@ -21,7 +21,7 @@ struct SingletonPayload {
 struct AppDirs {
     data: String,
     config: String,
-    config_file: String,
+    logs: String,
 }
 #[tauri::command]
 fn storage_path(app: tauri::AppHandle, settings: State<Settings>) -> AppDirs {
@@ -32,13 +32,13 @@ fn storage_path(app: tauri::AppHandle, settings: State<Settings>) -> AppDirs {
             .unwrap()
             .to_string_lossy()
             .to_string(),
-        config: app
+        config: settings.path.to_string_lossy().to_string(),
+        logs: app
             .path_resolver()
-            .app_config_dir()
+            .app_log_dir()
             .unwrap()
             .to_string_lossy()
             .to_string(),
-        config_file: settings.path.to_string_lossy().to_string(),
     }
 }
 
