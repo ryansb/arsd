@@ -358,14 +358,13 @@ fn main() {
                     }
                 }
             }
-            let config;
-            match get_configuration(
+            let config = match get_configuration(
                 app.path_resolver()
                     .app_config_dir()
                     .unwrap()
                     .join("config.yaml"),
             ) {
-                Ok(c) => config = c,
+                Ok(c) => c,
                 Err(e) => {
                     log::error!(
                         "Error loading configuration from {:?}",
@@ -374,7 +373,9 @@ fn main() {
                             .unwrap()
                             .join("config.yaml")
                     );
-                    panic!("Error loading configuration: {}", e)
+                    log::error!("Failed to load configuration: {:?}", e);
+                    app.handle().exit(-1);
+                    return Ok(());
                 }
             };
             app.manage(config.clone());

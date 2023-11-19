@@ -10,9 +10,14 @@ import { onMounted } from "vue";
 const store = useSessionStore();
 const partitions = ref<Partition[]>([]);
 const checkToken = ref();
+const snackbar = ref(false);
+const snackbarMessage = ref("Authentication error");
 
 async function getPartitions() {
     partitions.value = await invoke("get_partitions", {});
+    if (partitions.value.length === 0) {
+        return
+    }
     const s = partitions.value.map((p) => p.slug).reduce((p, _) => p)
     if (s === undefined) return
     store.partitions[s] = { slug: s }
@@ -76,8 +81,6 @@ async function tryAuth(partition: string) {
     }
 
 }
-let snackbar = ref(false);
-let snackbarMessage = ref("Authentication error");
 </script>
 
 <template>

@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, nextTick, onMounted } from "vue";
+import { invoke } from "@tauri-apps/api/tauri";
+
 import SessionList from "./components/SessionList.vue";
 import SortSelect from "./components/SortSelect.vue";
 import SearchBar from "./components/SearchBar.vue";
-import { nextTick } from "vue";
 import SessionToolbar from "./components/SessionToolbar.vue";
 import SettingsToolbar from "./components/SettingsToolbar.vue";
 
 const drawer = ref(false);
 const search = ref(false);
 const searchBox = ref<HTMLInputElement | null>(null);
+const partitionsFound = ref(true);
 
 watch(search, (isShown) => {
     if (isShown) {
@@ -18,6 +20,11 @@ watch(search, (isShown) => {
         })
     }
 });
+onMounted(async () => {
+    if (((await invoke('get_partitions')) as [] || []).length === 0) {
+        partitionsFound.value = false;
+    }
+})
 </script>
 
 <template>
@@ -42,6 +49,12 @@ watch(search, (isShown) => {
         </VNavigationDrawer>
         <VMain>
             <VContainer>
+                <VAlert v-if="!partitionsFound" color="error" icon="$error">
+                    <VAlertTitle>Missing SSO Partitions</VAlertTitle>
+                    No SSO partitions found. Please check your config file and try again. See the <a
+                        href="https://github.com/ryansb/arsd#configuration" target="_blank">configuration docs</a> for
+                    examples.
+                </VAlert>
                 <Suspense>
                     <SessionList />
                 </Suspense>

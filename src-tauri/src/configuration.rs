@@ -74,6 +74,15 @@ pub fn get_configuration(file: PathBuf) -> Result<Settings, config::ConfigError>
     let mut partial = config::Config::builder();
     if file.is_file() {
         partial = partial.add_source(config::File::from(file.clone()));
+    } else {
+        return Ok(Settings {
+            path: file,
+            partitions: vec![],
+            aliases: Aliases {
+                accounts: HashMap::new(),
+                roles: HashMap::new(),
+            },
+        });
     }
     let settings = partial
         .set_override("path", file.to_string_lossy().to_string())?
