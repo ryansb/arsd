@@ -80,7 +80,7 @@ function matchSearchTerm(account: AccountInfo, newSearch: string | undefined): b
 <template>
     <VRow>
         <template v-for="acct in accounts" :key="acct.account_id">
-            <VCol v-show="!removed.includes(acct.account_id)" xs=1 sm=6 md=4>
+            <VCol v-show="!removed.includes(acct.account_id)" xs=12 sm=6 md=6 lg=4 xl=3 xxl=2>
                 <Account :account=acct :partition-slug=$props.partitionSlug />
             </VCol>
         </template>
