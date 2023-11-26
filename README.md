@@ -10,6 +10,15 @@ A desktop app to manage sessions and roles for one or more AWS SSO domains.
 - Support credential-process for CLI and SDKs such as CDK/Go SDK V1 that lack native SSO integration
 - Support multiple SSO domains
 
+## Usage
+
+1. Download the `.dmg` from [Releases](https://github.com/ryansb/arsd/releases)
+2. Drag `arsd.app` to `/Applications`
+3. Control-click `arsd.app` and select "Open"
+4. You will see an "Unidentified Developer" prompt. Select continue, or build the application locally
+5. Follow the `Configuration` steps to add your SSO partition
+6. Optionally, add aliases for accounts and roles to make them easier to remember
+
 ## Configuration
 
 Configs are in the os-appropriate application configuration dir. On MacOS this is `/Users/your.name/Library/Application Support/io.rsb.arsd`. The desktop app automatically creates a `config.yaml` file with base values.
