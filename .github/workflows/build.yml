@@ -39,7 +39,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_SIGNER }}
           TAURI_KEY_PASSWORD: ''
         with:
-          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
+          tagName: arsd-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
           releaseName: 'arsd v__VERSION__'
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
