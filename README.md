@@ -21,13 +21,13 @@ A desktop app to manage sessions and roles for one or more AWS SSO domains.
 
 ## Configuration
 
-Configs are in the os-appropriate application configuration dir. On MacOS this is `/Users/your.name/Library/Application Support/io.rsb.arsd`. The desktop app automatically creates a `config.yaml` file with base values.
+Configs are in the os-appropriate application configuration dir. On MacOS this is `/Users/your.name/Library/Application Support/io.rsb.arsd`. Under left-side menu, the config path is copyable if you don't already have a config file set up.
 
-Below, see an example with one partition set up with an Amazon Web Services Identity and Access Management Identity Center (formerly known as AWS SSO). You will need your start URL, account ID, and region of the IAM Identity Center install.
+Below, find an example with one partition set up with an Amazon Web Services Identity and Access Management Identity Center (formerly known as AWS SSO). You will need your start URL, account ID, and region of the IAM Identity Center install.
 
 ```yaml
 partitions:
-- start_url: https://yourcloud.awsapps.com/start#
+- start_url: https://d-123abc.awsapps.com/start#
   region: us-west-2
   account_id: 999888777666
 aliases:
