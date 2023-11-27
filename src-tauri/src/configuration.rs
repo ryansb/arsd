@@ -72,6 +72,15 @@ impl Partition {
 
 pub fn get_configuration(file: PathBuf) -> Result<Settings, config::ConfigError> {
     let mut partial = config::Config::builder();
+    partial = partial.add_source(config::File::from_str(
+        r#"
+        partitions: []
+        aliases:
+          accounts: {}
+          roles: {}
+        "#,
+        config::FileFormat::Yaml,
+    ));
     if file.is_file() {
         partial = partial.add_source(config::File::from(file.clone()));
     } else {
