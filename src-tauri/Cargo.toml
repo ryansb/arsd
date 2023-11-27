@@ -1,10 +1,10 @@
 [package]
 name = "arsd"
-version = "0.1.3"
-description = "A Tauri App"
+version = "0.1.4"
+description = "AWS Role Speed Dial"
 authors = ["Ryan Scott Brown <sb@ryansb.com>"]
-license = ""
-repository = ""
+license = "MIT"
+repository = "https://github.com/ryansb/arsd"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -13,10 +13,10 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [ "config-json5" ] }
 
 [dependencies]
-aws-config = "0.56.1"
-aws-region = "0.25.4"
-aws-sdk-sso = "0.33.0"
-aws-sdk-ssooidc = "0.33.0"
+aws-config = "1.0.1"
+aws-sdk-sso = "1.2.0"
+aws-sdk-ssooidc = "1.2.0"
+aws-types = "1.0.1"
 chrono = { version = "0.4.31", features = [ "serde" ] }
 config = { version = "0.13.1", features = [ "yaml" ] }
 log = "^0.4"

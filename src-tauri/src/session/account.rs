@@ -1,4 +1,3 @@
-use aws_config;
 use aws_sdk_sso::{self, Error as SsoError};
 use chrono::{serde::ts_milliseconds, DateTime, Utc};
 
@@ -10,7 +9,7 @@ use crate::{
 };
 
 pub async fn list_roles(partition: Partition, token: String, account_id: String) -> Vec<RoleInfo> {
-    let config = aws_config::load_from_env().await;
+    let config = partition.aws_config().await;
     let client = aws_sdk_sso::Client::new(&config);
 
     let mut roles: Vec<RoleInfo> = vec![];
@@ -29,23 +28,22 @@ pub async fn list_roles(partition: Partition, token: String, account_id: String)
             Err(e) => {
                 log::warn!("Failed to get roles in {}: {:?}", account_id.clone(), e);
             }
-            Ok(pgn) => match pgn.role_list() {
-                None => {
+            Ok(pgn) => {
+                let l = pgn.role_list();
+                if pgn.role_list.is_none() {
                     log::warn!("No roles found for {}", account_id);
                     break;
                 }
-                Some(l) => {
-                    for role in l {
-                        roles.push(RoleInfo {
-                            alias: None,
-                            account_id: role.account_id.clone().unwrap(),
-                            role_name: role.role_name.clone().unwrap(),
-                            partition: partition.slug(),
-                        })
-                    }
-                    break;
+                for role in l {
+                    roles.push(RoleInfo {
+                        alias: None,
+                        account_id: role.account_id.clone().unwrap(),
+                        role_name: role.role_name.clone().unwrap(),
+                        partition: partition.slug(),
+                    })
                 }
-            },
+                break;
+            }
         };
     }
     log::debug!(
@@ -88,7 +86,7 @@ pub async fn list_accounts(partition: Partition, app: tauri::AppHandle) -> Vec<A
         None => return candidates.iter().map(|a| a.as_info()).collect(),
     };
 
-    let config = aws_config::load_from_env().await;
+    let config = partition.aws_config().await;
     let client = aws_sdk_sso::Client::new(&config);
 
     let mut accounts: Vec<sql::models::Account> = vec![];
@@ -105,7 +103,7 @@ pub async fn list_accounts(partition: Partition, app: tauri::AppHandle) -> Vec<A
         }
     };
 
-    for l in resp.account_list().unwrap() {
+    for l in resp.account_list() {
         accounts.push(sql::models::Account {
             partition: partition.slug(),
             account_id: l.account_id.clone().unwrap(),
@@ -123,7 +121,7 @@ pub async fn list_accounts(partition: Partition, app: tauri::AppHandle) -> Vec<A
             .send()
             .await
             .unwrap();
-        for l in resp.account_list().unwrap() {
+        for l in resp.account_list() {
             accounts.push(sql::models::Account {
                 partition: partition.slug(),
                 account_id: l.account_id.clone().unwrap(),
@@ -173,7 +171,7 @@ pub async fn get_credentials(
         None => todo!("handle missing token"),
     };
 
-    let config = aws_config::load_from_env().await;
+    let config = partition.aws_config().await;
     let client = aws_sdk_sso::Client::new(&config);
 
     let resp = client

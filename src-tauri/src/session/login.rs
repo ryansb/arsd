@@ -1,4 +1,3 @@
-use aws_config;
 use aws_sdk_ssooidc::{self, Error as SsoIdcError};
 use chrono::{serde::ts_milliseconds, DateTime, Utc};
 use tauri::{AppHandle, Manager};
@@ -75,7 +74,7 @@ impl SessionState {
         partition: Partition,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         log::info!("starting login check");
-        let config = aws_config::load_from_env().await;
+        let config = partition.aws_config().await;
         Ok(Self {
             partition,
             app,

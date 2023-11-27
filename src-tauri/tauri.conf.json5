@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "arsd",
-    "version": "0.1.3"
+    "version": "0.1.4"
   },
   "tauri": {
     "allowlist": {
@@ -20,7 +20,6 @@
       "fs": {
         "all": false,
         "scope": [
-          "~/.aws/config",
           "$CONFIG/*",
           "$APPDATA/*",
           "$APPLOG/*"
