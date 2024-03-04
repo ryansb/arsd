@@ -10,7 +10,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [ "config-json5" ] }
+tauri-build = { version = "1.5.1", features = [ "config-json5" ] }
 
 [dependencies]
 aws-config = "1.0.1"
@@ -29,7 +29,7 @@ serde_derive = "1.0.192"
 serde_ini = "*"
 serde_json = "1.0"
 serde_rusqlite = "0.33.1"
-tauri = { version = "1.5", features = [ "fs-read-dir", "fs-create-dir", "fs-write-file", "fs-exists", "fs-read-file", "window-close", "window-hide", "window-create", "clipboard-write-text", "clipboard-read-text", "cli", "shell-open", "config-json5" ] }
+tauri = { version = "1.6", features = [ "fs-read-dir", "fs-create-dir", "fs-write-file", "fs-exists", "fs-read-file", "window-close", "window-hide", "window-create", "clipboard-write-text", "clipboard-read-text", "cli", "shell-open", "config-json5" ] }
 tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 tokio = { version = "1", features = [ "full" ] }
