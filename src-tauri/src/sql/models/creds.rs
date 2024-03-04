@@ -78,7 +78,7 @@ impl Registration {
             "SELECT * FROM registrations WHERE partition = :partition AND expires_at > :now LIMIT 1").unwrap();
         let rows = statement.query_and_then(
             named_params! {":partition": partition, ":now": Utc::now()},
-            |row| sq_serde::from_row::<Registration>(row),
+            sq_serde::from_row::<Registration>,
         );
         match rows {
             Err(e) => match e {

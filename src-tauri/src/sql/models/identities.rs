@@ -25,7 +25,7 @@ impl Account {
             .unwrap();
         let rows = statement.query_and_then(
             named_params! {":account_id": account_id, ":partition": partition},
-            |row| sq_serde::from_row::<Account>(row),
+            sq_serde::from_row::<Account>,
         );
         match rows {
             Err(e) => match e {
@@ -148,7 +148,7 @@ impl Role {
             .unwrap();
         let rows = statement.query_and_then(
             named_params! {":partition": partition, ":account_id": account_id},
-            |row| sq_serde::from_row::<Role>(row),
+            sq_serde::from_row::<Role>,
         );
         match rows {
             Err(e) => match e {

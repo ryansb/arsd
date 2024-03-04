@@ -60,7 +60,7 @@ impl Partition {
         format!(
             "{}-{}",
             self.region,
-            caps.get(1).unwrap().as_str().to_string()
+            caps.get(1).unwrap().as_str()
         )
     }
     pub fn sso_start_url(&self) -> String {

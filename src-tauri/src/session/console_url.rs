@@ -70,8 +70,7 @@ pub async fn get_console_url(
             "Destination",
             format!(
                 "https://{}.console.{}/console/home",
-                "us-west-2",
-                AWS_DOMAIN.to_string()
+                "us-west-2", AWS_DOMAIN
             )
             .as_str(),
         )
