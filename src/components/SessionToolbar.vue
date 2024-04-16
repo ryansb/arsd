@@ -48,12 +48,15 @@ async function tryAuth(partition: string) {
         console.log("Sending authorize_device")
         payload = await invoke("authorize_device", { authEvent: { partition_name: partition } });
         console.log("received authorize_device:", payload)
-        sendNotification({
-            // @ts-expect-error
-            title: `arsd confirmation - ${payload.user_code || "Unknown"}`,
-            body: `Check the confirmation code to start your ${partition} session`,
-            channelId: "arsd"
-        });
+        // @ts-expect-error
+        if (payload.type !== "Success") {
+            sendNotification({
+                // @ts-expect-error
+                title: `arsd confirmation - ${payload.user_code || "Unknown"}`,
+                body: `Check the confirmation code to start your ${partition} session`,
+                channelId: "arsd"
+            });
+        }
     } catch (e) {
         snackbar.value = true
         snackbarMessage.value = `Failed to authenticate for ${partition}: ${e}`

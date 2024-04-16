@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { onMounted } from "vue";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const snackbar = ref(false);
@@ -25,7 +24,7 @@ async function clear() {
 }
 </script>
 
-<template v-slot="append" >
+<template v-slot="append">
     <VSnackbar v-model="snackbar" :timeout="2000" top>
         <VBtn icon="mdi-close" variant="text" @click="snackbar = false" />
         <span>{{ snackbarMessage }}</span>
@@ -34,8 +33,8 @@ async function clear() {
         <VListItem>
             <VListItemTitle>Settings</VListItemTitle>
             <VListItemSubtitle>
-                <VIcon icon="mdi-source-branch-sync" /> <a href="https://github.com/ryansb/arsd" target="_blank">Application
-                    Repository</a>
+                <VIcon icon="mdi-source-branch-sync" /> <a href="https://github.com/ryansb/arsd" target="_blank">
+                    Application Repository</a>
             </VListItemSubtitle>
         </VListItem>
         <VDivider />
