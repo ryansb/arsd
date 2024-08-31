@@ -10,8 +10,8 @@
         "tauri": "tauri"
     },
     "dependencies": {
-        "@tauri-apps/api": "^1.5.3",
-        "pinia": "^2.1.7",
+        "@tauri-apps/api": "^1.6.0",
+        "pinia": "^2.2.2",
         "vue": "^3.4.21",
         "vuetify": "^3.5.7"
     },
@@ -24,6 +24,6 @@
         "vue-tsc": "^2.0.3"
     },
     "volta": {
-        "node": "20.10.0"
+        "node": "20.17.0"
     }
 }
