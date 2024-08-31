@@ -243,7 +243,7 @@ impl SessionState {
                                 access_token: resp.access_token().unwrap().to_string(),
                                 expires_at: Utc::now()
                                     + chrono::Duration::seconds(
-                                        resp.expires_in().try_into().unwrap(),
+                                        resp.expires_in().into()
                                     ),
                             }
                             .insert(db)
