@@ -94,6 +94,37 @@ async fn list_accounts(
 }
 
 #[tauri::command]
+async fn settings_get_sort(app: tauri::AppHandle) -> i32 {
+    app.db(|db| {
+        sql::models::SettingSort::get(db).unwrap_or(0)
+    })
+}
+
+#[tauri::command]
+async fn settings_save_sort(sort: i32, app: tauri::AppHandle) -> Result<(), String> {
+    let extant = app.db_mut(|db| {
+        match sort {
+            0 => sql::models::SettingSort {
+                value: sql::models::SortOrder::ALPHA,
+            }
+            .insert(db),
+            1 => sql::models::SettingSort {
+                value: sql::models::SortOrder::FRECENCY,
+            }
+            .insert(db),
+            _ => Err(rusqlite::Error::InvalidQuery),
+        }
+    });
+    match extant {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            log::error!("Failed to delete local data: {:?}", e);
+            Err(String::from("Delete failed"))
+        }
+    }
+}
+
+#[tauri::command]
 async fn delete_cache(app: tauri::AppHandle) -> Result<(), String> {
     let extant = app.db(|db| {
         db.execute_batch(
@@ -448,13 +479,15 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             authorize_device,
             check_device_token,
-            storage_path,
+            delete_cache,
             get_credentials_for,
             get_partitions,
             list_accounts,
             list_roles_for,
             open_web_console,
-            delete_cache
+            settings_get_sort,
+            settings_save_sort,
+            storage_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

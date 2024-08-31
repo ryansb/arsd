@@ -2,7 +2,7 @@ use rusqlite::Connection;
 use std::fs;
 use tauri::AppHandle;
 
-const CURRENT_DB_VERSION: u32 = 1;
+const CURRENT_DB_VERSION: u32 = 2;
 
 /// Initializes the database connection, creating the .sqlite file if needed, and upgrading the database
 /// if it's out of date.
@@ -75,6 +75,10 @@ pub fn upgrade_database_if_needed(
                 account_name TEXT NOT NULL,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (partition, account_id)
+            );
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
             );
             ",
         )?;
