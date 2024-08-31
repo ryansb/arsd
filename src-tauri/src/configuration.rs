@@ -48,7 +48,7 @@ impl Partition {
     }
 
     pub async fn aws_config(&self) -> aws_types::SdkConfig {
-        aws_config::defaults(aws_config::BehaviorVersion::v2023_11_09())
+        aws_config::defaults(aws_config::BehaviorVersion::v2024_03_28())
             .region(aws_config::Region::new(self.region.clone()))
             .load()
             .await
