@@ -1,6 +1,6 @@
 [package]
 name = "arsd"
-version = "0.1.4"
+version = "0.1.5"
 description = "AWS Role Speed Dial"
 authors = ["Ryan Scott Brown <sb@ryansb.com>"]
 license = "MIT"

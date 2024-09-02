@@ -5,7 +5,7 @@ pub fn client_name() -> String {
         "{} arsd {}@{}",
         whoami::platform(),
         whoami::username(),
-        whoami::hostname(),
+        whoami::fallible::hostname().unwrap_or_else(|_| "unknown".to_string()),
     )
 }
 
