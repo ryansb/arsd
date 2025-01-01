@@ -129,7 +129,7 @@ impl SessionState {
                             )
                             .expect("client ID expiry timestamp should parse"),
                         };
-                        m.insert(db).unwrap()
+                        m.insert(db).expect("Failed to save registration for the current partition");
                     });
                 };
                 self.state = State::Registered;

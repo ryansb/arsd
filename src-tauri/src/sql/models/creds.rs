@@ -95,7 +95,13 @@ impl Registration {
     pub fn insert(&self, db: &Connection) -> Result<(), rusqlite::Error> {
         db.execute(
             "INSERT INTO registrations (partition, client_id, client_secret, expires_at, issued_at) \
-            VALUES (:partition, :client_id, :client_secret, :expires_at, :issued_at)",
+            VALUES (:partition, :client_id, :client_secret, :expires_at, :issued_at)
+            ON CONFLICT (partition) DO UPDATE SET
+                client_id = excluded.client_id,
+                client_secret = excluded.client_secret,
+                expires_at = excluded.expires_at,
+                issued_at = excluded.issued_at
+            ",
             sq_serde::to_params_named(self
             )
                 .unwrap()
