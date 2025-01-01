@@ -57,11 +57,7 @@ impl Partition {
     pub fn slug(&self) -> String {
         let re = Regex::new(r"^https://(.+)\.awsapps\.com/start#$").unwrap();
         let caps = re.captures(&self.start_url).unwrap();
-        format!(
-            "{}-{}",
-            self.region,
-            caps.get(1).unwrap().as_str()
-        )
+        format!("{}-{}", self.region, caps.get(1).unwrap().as_str())
     }
     pub fn sso_start_url(&self) -> String {
         let re = Regex::new(r"^https://.+\.awsapps\.com/start#$").unwrap();

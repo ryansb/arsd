@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event'
 import Account from "./Account.vue"
 import { AccountInfo, SortOrder, useSessionStore } from "../store";

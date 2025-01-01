@@ -1,16 +1,11 @@
 use rusqlite::Connection;
-use std::fs;
-use tauri::AppHandle;
+use std::{fs, path::PathBuf};
 
 const CURRENT_DB_VERSION: u32 = 2;
 
 /// Initializes the database connection, creating the .sqlite file if needed, and upgrading the database
 /// if it's out of date.
-pub fn initialize_database(app_handle: &AppHandle) -> Result<Connection, rusqlite::Error> {
-    let app_dir = app_handle
-        .path_resolver()
-        .app_data_dir()
-        .expect("The app data directory should exist.");
+pub fn initialize_database(app_dir: PathBuf) -> Result<Connection, rusqlite::Error> {
     fs::create_dir_all(&app_dir).expect("The app data directory should be created.");
     let sqlite_path = app_dir.join("arsd.sqlite");
 

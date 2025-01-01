@@ -2,62 +2,40 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": false
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
   },
-  "package": {
-    "productName": "arsd",
-    "version": "0.1.5"
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": false
   },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "fs": {
-        "all": false,
-        "scope": [
-          "$CONFIG/*",
-          "$APPDATA/*",
-          "$APPLOG/*"
-        ],
-        "exists": true,
-        "readFile": true,
-        "writeFile": true,
-        "readDir": true,
-        "createDir": true
-      },
-      "window": {
-        "all": false,
-        "close": true,
-        "create": true,
-        "hide": true
-      },
-      "clipboard": {
-        "all": false,
-        "readText": true,
-        "writeText": true
+  "productName": "arsd",
+  "mainBinaryName": "arsd",
+  "version": "0.1.7",
+  "identifier": "io.rsb.arsd",
+  "plugins": {
+    "cli": {
+      "description": "arsd - AWS Role Speed Dial",
+      "subcommands": {
+        "cs": {
+          "description": "Open a session in the system browser"
+        }
       }
     },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "io.rsb.arsd",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ]
-    },
-    "security": {
-      "csp": "default-src 'self' localhost; style-src 'unsafe-inline' localhost",
-      "devCsp": "default-src 'self' localhost"
-    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIyNTRFMUEzMDJFRDUzODgKUldTSVUrMENvK0ZVc3ZQenpxMGdyVE0yRXZEMVVCVHRielVsVGtSQ28yamZ0SVdZSGh2c2tjMVMK"
+    }
+  },
+  "app": {
+    "withGlobalTauri": false,
     "windows": [
       {
         "fullscreen": false,
@@ -68,20 +46,13 @@
         "minWidth": 480,
         "minHeight": 600,
         "label": "main",
-        "visible": false
+        "visible": false,
+        "useHttpsScheme": true
       }
     ],
-    "cli": {
-      "description": "arsd - AWS Role Speed Dial",
-      "subcommands": {
-        "cs": {
-          "description": "Open a session in the system browser"
-        }
-      }
-    },
-    "updater": {
-      "active": false,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIyNTRFMUEzMDJFRDUzODgKUldTSVUrMENvK0ZVc3ZQenpxMGdyVE0yRXZEMVVCVHRielVsVGtSQ28yamZ0SVdZSGh2c2tjMVMK"
+    "security": {
+      "devCsp": "default-src 'self' localhost",
+      "csp": "default-src 'self' localhost; style-src 'unsafe-inline' localhost; connect-src ipc: http://ipc.localhost"
     }
   }
 }

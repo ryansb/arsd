@@ -1,6 +1,6 @@
 [package]
 name = "arsd"
-version = "0.1.5"
+version = "0.1.7"
 description = "AWS Role Speed Dial"
 authors = ["Ryan Scott Brown <sb@ryansb.com>"]
 license = "MIT"
@@ -10,7 +10,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.5.1", features = [ "config-json5" ] }
+tauri-build = { version = "2", features = [ "config-json5" ] }
 
 [dependencies]
 aws-config = "1.0.1"
@@ -29,9 +29,13 @@ serde_derive = "1.0.192"
 serde_ini = "*"
 serde_json = "1.0"
 serde_rusqlite = "0.33.1"
-tauri = { version = "1.6", features = [ "fs-read-dir", "fs-create-dir", "fs-write-file", "fs-exists", "fs-read-file", "window-close", "window-hide", "window-create", "clipboard-write-text", "clipboard-read-text", "cli", "shell-open", "config-json5" ] }
-tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
-tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
+tauri = { version = "2", features = [ "config-json5" ] }
+tauri-plugin-clipboard-manager = "2.2.0"
+tauri-plugin-fs = "2"
+tauri-plugin-log = { version = "2" }
+tauri-plugin-shell = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-single-instance = { version = "2" }
 tokio = { version = "1", features = [ "full" ] }
 url = { version = "2", features = ["serde"] }
 whoami = "1.4.1"
@@ -40,3 +44,6 @@ whoami = "1.4.1"
 # this feature is used for production builds or when `devPath` points to the filesystem
 # DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+
+[target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
+tauri-plugin-updater = "2"

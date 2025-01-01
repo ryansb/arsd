@@ -2,8 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use arsd::session::login::ConfirmationInfo;
-use tauri::{AppHandle, Manager, State};
-use tauri_plugin_log::LogTarget;
+use tauri::Listener;
+use tauri::{AppHandle, Emitter, EventTarget, Manager, State};
+use tauri_plugin_log::Target as LogTarget;
+use tauri_plugin_log::TargetKind as LogTargetKind;
 
 use arsd::configuration::{get_configuration, Settings};
 use arsd::domain::{AccountInfo, RoleInfo};
@@ -27,14 +29,14 @@ struct AppDirs {
 fn storage_path(app: tauri::AppHandle, settings: State<Settings>) -> AppDirs {
     AppDirs {
         data: app
-            .path_resolver()
+            .path()
             .app_data_dir()
             .unwrap()
             .to_string_lossy()
             .to_string(),
         config: settings.path.to_string_lossy().to_string(),
         logs: app
-            .path_resolver()
+            .path()
             .app_log_dir()
             .unwrap()
             .to_string_lossy()
@@ -95,25 +97,21 @@ async fn list_accounts(
 
 #[tauri::command]
 async fn settings_get_sort(app: tauri::AppHandle) -> i32 {
-    app.db(|db| {
-        sql::models::SettingSort::get(db).unwrap_or(0)
-    })
+    app.db(|db| sql::models::SettingSort::get(db).unwrap_or(0))
 }
 
 #[tauri::command]
 async fn settings_save_sort(sort: i32, app: tauri::AppHandle) -> Result<(), String> {
-    let extant = app.db_mut(|db| {
-        match sort {
-            0 => sql::models::SettingSort {
-                value: sql::models::SortOrder::ALPHA,
-            }
-            .insert(db),
-            1 => sql::models::SettingSort {
-                value: sql::models::SortOrder::FRECENCY,
-            }
-            .insert(db),
-            _ => Err(rusqlite::Error::InvalidQuery),
+    let extant = app.db_mut(|db| match sort {
+        0 => sql::models::SettingSort {
+            value: sql::models::SortOrder::ALPHA,
         }
+        .insert(db),
+        1 => sql::models::SettingSort {
+            value: sql::models::SortOrder::FRECENCY,
+        }
+        .insert(db),
+        _ => Err(rusqlite::Error::InvalidQuery),
     });
     match extant {
         Ok(_) => Ok(()),
@@ -288,7 +286,8 @@ async fn check_device_token(
                     Ok(String::from("Pending"))
                 }
                 login::State::Ready => {
-                    app.emit_all(
+                    app.emit_to(
+                        EventTarget::any(),
                         "token_ready",
                         events::AuthorizeDevice {
                             partition_name: partition.slug(),
@@ -354,13 +353,23 @@ async fn authorize_device(
 }
 
 fn main() {
-    let mut builder = tauri::Builder::default();
+    let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_fs::init());
     #[cfg(debug_assertions)]
     {
         builder = builder.plugin(
             tauri_plugin_log::Builder::default()
                 .level(log::LevelFilter::Info)
-                .targets([LogTarget::Stdout, LogTarget::LogDir])
+                .targets([
+                    LogTarget::new(LogTargetKind::Stdout),
+                    LogTarget::new(LogTargetKind::LogDir {
+                        file_name: Some("arsd".into()),
+                    }),
+                ])
                 .build(),
         );
     }
@@ -370,18 +379,24 @@ fn main() {
             tauri_plugin_log::Builder::default()
                 .level(log::LevelFilter::Info)
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
-                .targets([LogTarget::LogDir])
+                .targets([LogTarget::new(LogTargetKind::LogDir {
+                    file_name: Some("arsd".into()),
+                })])
                 .build(),
         );
     }
     builder
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             println!("{}, {argv:?}, {cwd}", app.package_info().name);
-            app.emit_all("single-instance", SingletonPayload { args: argv, cwd })
-                .unwrap();
+            app.emit_to(
+                EventTarget::any(),
+                "single-instance",
+                SingletonPayload { args: argv, cwd },
+            )
+            .unwrap();
         }))
         .setup(|app| {
-            if let Some(config_path) = app.path_resolver().app_config_dir() {
+            if let Ok(config_path) = app.path().app_config_dir() {
                 if !config_path.is_dir() {
                     // make the config directory if it doesn't exist
                     if let Err(e) = std::fs::create_dir_all(config_path) {
@@ -389,58 +404,47 @@ fn main() {
                     }
                 }
             }
-            let config = match get_configuration(
-                app.path_resolver()
-                    .app_config_dir()
-                    .unwrap()
-                    .join("config.yaml"),
-            ) {
-                Ok(c) => c,
-                Err(e) => {
-                    log::error!(
-                        "Error loading configuration from {:?}",
-                        app.path_resolver()
-                            .app_config_dir()
-                            .unwrap()
-                            .join("config.yaml")
-                    );
-                    log::error!("Failed to load configuration: {:?}", e);
-                    app.handle().exit(-1);
-                    return Ok(());
-                }
-            };
+            let config =
+                match get_configuration(app.path().app_config_dir().unwrap().join("config.yaml")) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        log::error!(
+                            "Error loading configuration from {:?}",
+                            app.path().app_config_dir().unwrap().join("config.yaml")
+                        );
+                        log::error!("Failed to load configuration: {:?}", e);
+                        app.handle().exit(-1);
+                        return Ok(());
+                    }
+                };
             app.manage(config.clone());
 
-            app.listen_global("authorize_device", |event| {
+            app.listen_any("authorize_device", |event| {
                 log::info!("Received `authorize_device` event: {:?}", event);
-                match event.payload() {
-                    None => log::error!("No payload for `authorize_device` event"),
-                    Some(payload) => {
-                        match serde_json::from_str::<events::AuthorizeDevice>(payload) {
-                            Ok(auth) => {
-                                log::info!(
-                                    "Kicking off `authorize_device` for {}",
-                                    auth.partition_name
-                                );
-                            }
-                            Err(e) => {
-                                log::error!("Error deserializing `authorize_device` event: {}", e);
-                            }
-                        }
+                match serde_json::from_str::<events::AuthorizeDevice>(event.payload()) {
+                    Ok(auth) => {
+                        log::info!("Kicking off `authorize_device` for {}", auth.partition_name);
+                    }
+                    Err(e) => {
+                        log::error!("Error deserializing `authorize_device` event: {}", e);
                     }
                 }
             });
 
-            let main_window = app.get_window("main").unwrap();
-            let handle = app.app_handle();
+            let main_window = app.get_webview_window("main").unwrap();
 
             let sql_state = sql::connect::SqlRepo {
                 conn: std::sync::Mutex::new(None),
             };
             *sql_state.conn.lock().unwrap() = Some(
-                sql::database::initialize_database(&handle).expect("Database should initialize"),
+                sql::database::initialize_database(
+                    app.path()
+                        .app_data_dir()
+                        .expect("data dir must exist for us to make the DB"),
+                )
+                .expect("Database should initialize"),
             );
-            handle.manage(sql_state);
+            app.manage(sql_state);
 
             tauri::async_runtime::spawn(async move {
                 main_window.show().unwrap();
@@ -455,23 +459,15 @@ fn main() {
                         partition.start_url,
                         partition.region
                     );
-                    handle
-                        .emit_all(
+                    main_window
+                        .emit_to(
+                            EventTarget::any(),
                             "authorize_device",
                             events::AuthorizeDevice {
                                 partition_name: partition.slug(),
                             },
                         )
                         .unwrap();
-                    //handle.trigger_global(
-                    //    "authorize_device",
-                    //    Some(
-                    //        serde_json::to_string(&events::AuthorizeDevice {
-                    //            partition_name: partition.slug(),
-                    //        })
-                    //        .unwrap(),
-                    //    ),
-                    //);
                 }
             });
             Ok(())

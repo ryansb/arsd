@@ -29,11 +29,9 @@ impl SettingSort {
                 _ => Err(e),
             },
             Ok(r) => match r.into_iter().next() {
-                Some(i) => {
-                    match i.expect("Something went wrong with sql_serde").value {
-                        SortOrder::ALPHA => Ok(0),
-                        SortOrder::FRECENCY => Ok(1),
-                    }
+                Some(i) => match i.expect("Something went wrong with sql_serde").value {
+                    SortOrder::ALPHA => Ok(0),
+                    SortOrder::FRECENCY => Ok(1),
                 },
                 None => Ok(0),
             },

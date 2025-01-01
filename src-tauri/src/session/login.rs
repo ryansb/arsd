@@ -1,6 +1,6 @@
 use aws_sdk_ssooidc::{self, Error as SsoIdcError};
 use chrono::{serde::ts_milliseconds, DateTime, Utc};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, EventTarget};
 
 use crate::configuration::Partition;
 use crate::domain::storage::client_name;
@@ -129,12 +129,17 @@ impl SessionState {
                             )
                             .expect("client ID expiry timestamp should parse"),
                         };
-                        m.insert(db).expect("Failed to save registration for the current partition");
+                        m.insert(db)
+                            .expect("Failed to save registration for the current partition");
                     });
                 };
                 self.state = State::Registered;
                 self.app
-                    .emit_all("needs_confirmation", self.partition.slug())
+                    .emit_to(
+                        EventTarget::any(),
+                        "needs_confirmation",
+                        self.partition.slug(),
+                    )
                     .unwrap();
                 State::Registered
                 // learn what boxing is if we want this state machine to be recursive
@@ -242,9 +247,7 @@ impl SessionState {
                                 token_type: resp.token_type().unwrap().to_string(),
                                 access_token: resp.access_token().unwrap().to_string(),
                                 expires_at: Utc::now()
-                                    + chrono::Duration::seconds(
-                                        resp.expires_in().into()
-                                    ),
+                                    + chrono::Duration::seconds(resp.expires_in().into()),
                             }
                             .insert(db)
                             .unwrap()

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/tauri";
-import { writeText } from '@tauri-apps/api/clipboard';
-import { open } from '@tauri-apps/api/shell';
+import { invoke } from "@tauri-apps/api/core";
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { open } from '@tauri-apps/plugin-shell';
 import { onMounted } from "vue";
 import { AccountInfo, Role, Credentials } from "../store";
 

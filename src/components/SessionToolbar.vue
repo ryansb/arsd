@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from "vue";
-import { invoke } from "@tauri-apps/api/tauri";
+import { sendNotification } from '@tauri-apps/plugin-notification';
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event'
-import { open } from '@tauri-apps/api/shell';
+import { open } from '@tauri-apps/plugin-shell';
 import { Confirmation, Partition, useSessionStore } from "../store";
 import CountDown from "./CountDown.vue";
 import { onMounted } from "vue";
@@ -47,6 +48,12 @@ async function tryAuth(partition: string) {
         console.log("Sending authorize_device")
         payload = await invoke("authorize_device", { authEvent: { partition_name: partition } });
         console.log("received authorize_device:", payload)
+        sendNotification({
+            // @ts-expect-error
+            title: `arsd confirmation - ${payload.user_code || "Unknown"}`,
+            body: `Check the confirmation code to start your ${partition} session`,
+            channelId: "arsd"
+        });
     } catch (e) {
         snackbar.value = true
         snackbarMessage.value = `Failed to authenticate for ${partition}: ${e}`
