@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest-large]
+        platform: [macos-latest]
         # TODO(rsb): windows-latest and ubuntu aren't yet supported by arsd, skip them
         # platform: [macos-latest-large, ubuntu-20.04, windows-latest]
 
