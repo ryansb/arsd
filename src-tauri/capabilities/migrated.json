@@ -2,9 +2,7 @@
   "identifier": "migrated",
   "description": "permissions that were migrated from v1",
   "local": true,
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
@@ -25,11 +23,7 @@
     "shell:default",
     {
       "identifier": "fs:scope",
-      "allow": [
-        "$CONFIG/*",
-        "$APPDATA/*",
-        "$APPLOG/*"
-      ]
+      "allow": ["$CONFIG/*", "$APPDATA/*", "$APPLOG/*"]
     }
   ]
 }

@@ -11,53 +11,53 @@ const store = useSessionStore();
 const DEBOUNCE_MS = 250;
 let timeout: number;
 
-
 const handleKeydown = (event: KeyboardEvent) => {
-    // on `Esc`, clear and hide the search box
-    if (event.key === 'Escape') {
-        search.value = false;
-        searchTerms.value = '';
-        return
-    }
+  // on `Esc`, clear and hide the search box
+  if (event.key === "Escape") {
+    search.value = false;
+    searchTerms.value = "";
+    return;
+  }
 
-    if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-    ) return
+  if (
+    event.target instanceof HTMLInputElement ||
+    event.target instanceof HTMLTextAreaElement
+  )
+    return;
 
-    // for regular characters, show and focus the search box
-    // VTextField will capture the key press.
-    if (event.key.length === 1) {
-        search.value = true;
-        nextTick(() => {
-            searchBox.value?.focus();
-        });
-    }
+  // for regular characters, show and focus the search box
+  // VTextField will capture the key press.
+  if (event.key.length === 1) {
+    search.value = true;
+    nextTick(() => {
+      searchBox.value?.focus();
+    });
+  }
 };
 
 onMounted(() => {
-    window.addEventListener('keydown', handleKeydown);
+  window.addEventListener("keydown", handleKeydown);
 });
 
 onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener("keydown", handleKeydown);
 });
 
 watch(searchTerms, (terms) => {
-    timeout && clearTimeout(timeout);
+  timeout && clearTimeout(timeout);
 
-    timeout = setTimeout(() => {
-        if (terms && terms.length >= 1) store.$patch({ search_term: terms })
-        else store.$patch({ search_term: undefined })
-    }, DEBOUNCE_MS);
+  timeout = setTimeout(() => {
+    if (terms && terms.length >= 1) store.$patch({ search_term: terms });
+    else store.$patch({ search_term: undefined });
+  }, DEBOUNCE_MS);
 });
 
 watch(search, (isShown) => {
-    if (isShown) {
-        nextTick(() => {
-            searchBox.value && searchBox.value.focus();
-        })
-    }
+  if (isShown) {
+    nextTick(() => {
+      searchBox.value && searchBox.value.focus();
+    });
+  }
 });
 </script>
 

@@ -9,18 +9,16 @@ const configPath = ref("");
 const logPath = ref("");
 
 onMounted(async () => {
-    // @ts-ignore-next-line
-    const { logs, config } = await invoke("storage_path");
-    logPath.value = logs;
-    configPath.value = config;
+  // @ts-ignore-next-line
+  const { logs, config } = await invoke("storage_path");
+  logPath.value = logs;
+  configPath.value = config;
 });
 
-
-
 async function clear() {
-    snackbarMessage.value = "Local data cleared"
-    await invoke("delete_cache");
-    window.location.reload();
+  snackbarMessage.value = "Local data cleared";
+  await invoke("delete_cache");
+  window.location.reload();
 }
 </script>
 

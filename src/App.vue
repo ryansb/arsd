@@ -14,17 +14,17 @@ const searchBox = ref<HTMLInputElement | null>(null);
 const partitionsFound = ref(true);
 
 watch(search, (isShown) => {
-    if (isShown) {
-        nextTick(() => {
-            searchBox.value && searchBox.value.focus();
-        })
-    }
+  if (isShown) {
+    nextTick(() => {
+      searchBox.value && searchBox.value.focus();
+    });
+  }
 });
 onMounted(async () => {
-    if (((await invoke('get_partitions')) as [] || []).length === 0) {
-        partitionsFound.value = false;
-    }
-})
+  if ((((await invoke("get_partitions")) as []) || []).length === 0) {
+    partitionsFound.value = false;
+  }
+});
 </script>
 
 <template>
