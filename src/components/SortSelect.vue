@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
-import { SortOrder, useSessionStore } from "../store";
 import { onBeforeMount } from "vue";
+import { SortOrder, useSessionStore } from "../store";
 
 const store = useSessionStore();
 

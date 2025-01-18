@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { nextTick, onMounted, ref, watch } from "vue";
 
-import SessionList from "./components/SessionList.vue";
-import SortSelect from "./components/SortSelect.vue";
 import SearchBar from "./components/SearchBar.vue";
+import SessionList from "./components/SessionList.vue";
 import SessionToolbar from "./components/SessionToolbar.vue";
 import SettingsToolbar from "./components/SettingsToolbar.vue";
+import SortSelect from "./components/SortSelect.vue";
 
 const drawer = ref(false);
 const search = ref(false);

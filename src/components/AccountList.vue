@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import Account from "./Account.vue";
-import { type AccountInfo, SortOrder, useSessionStore } from "../store";
+import { onMounted, ref } from "vue";
 import { onBeforeUnmount } from "vue";
+import { type AccountInfo, SortOrder, useSessionStore } from "../store";
+import Account from "./Account.vue";
 
 const props = defineProps<{
   partitionSlug: string;
@@ -38,7 +38,9 @@ function sortAwareAccount(a: AccountInfo, b: AccountInfo) {
 }
 
 async function listAccounts(slug: string) {
-  const accts: AccountInfo[] = await invoke("list_accounts", { partition: slug });
+  const accts: AccountInfo[] = await invoke("list_accounts", {
+    partition: slug,
+  });
   accounts.value = accts.sort(sortAwareAccount);
 }
 

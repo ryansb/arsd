@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from "vue";
-import { useSessionStore } from "../store";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import { nextTick } from "vue";
+import { useSessionStore } from "../store";
 
 const search = ref(false);
 const searchTerms = ref("");

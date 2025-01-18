@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-shell";
+import { ref } from "vue";
 import { onMounted } from "vue";
-import type { AccountInfo, Role, Credentials } from "../store";
+import type { AccountInfo, Credentials, Role } from "../store";
 
 const props = defineProps<{
   account: AccountInfo;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { onMounted, ref } from "vue";
 
 const snackbar = ref(false);
 const snackbarMessage = ref("Local data cleared");
