@@ -8,7 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "biome": "biome",
-    "fix": "biome format --fix && biome lint --fix",
+    "fix": "biome check --fix",
     "tauri": "tauri"
   },
   "dependencies": {

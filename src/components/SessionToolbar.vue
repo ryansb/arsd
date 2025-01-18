@@ -4,7 +4,7 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-shell";
-import { Confirmation, Partition, useSessionStore } from "../store";
+import { type Confirmation, type Partition, useSessionStore } from "../store";
 import CountDown from "./CountDown.vue";
 import { onMounted } from "vue";
 

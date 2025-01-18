@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { open } from "@tauri-apps/plugin-shell";
 import { onMounted } from "vue";
-import { AccountInfo, Role, Credentials } from "../store";
+import type { AccountInfo, Role, Credentials } from "../store";
 
 const props = defineProps<{
   account: AccountInfo;

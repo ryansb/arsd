@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import Account from "./Account.vue";
-import { AccountInfo, SortOrder, useSessionStore } from "../store";
+import { type AccountInfo, SortOrder, useSessionStore } from "../store";
 import { onBeforeUnmount } from "vue";
 
 const props = defineProps<{
@@ -12,7 +12,7 @@ const props = defineProps<{
 
 const accounts = ref<AccountInfo[]>([]);
 
-let unSubscribe = await listen("token_ready", async (_) => {
+const unSubscribe = await listen("token_ready", async (_) => {
   await listAccounts(props.partitionSlug);
 });
 
@@ -38,7 +38,7 @@ function sortAwareAccount(a: AccountInfo, b: AccountInfo) {
 }
 
 async function listAccounts(slug: string) {
-  let accts: AccountInfo[] = await invoke("list_accounts", { partition: slug });
+  const accts: AccountInfo[] = await invoke("list_accounts", { partition: slug });
   accounts.value = accts.sort(sortAwareAccount);
 }
 
