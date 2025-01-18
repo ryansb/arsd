@@ -6,6 +6,7 @@ use crate::configuration::Partition;
 use crate::domain::storage::client_name;
 use crate::{sql, sql::ServiceAccess};
 
+// matching type in SessionToolbar.vue
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct ConfirmationInfo {
     pub partition: String,

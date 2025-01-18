@@ -55,7 +55,7 @@ watch(searchTerms, (terms) => {
 watch(search, (isShown) => {
   if (isShown) {
     nextTick(() => {
-      searchBox.value && searchBox.value.focus();
+      searchBox.value?.focus();
     });
   }
 });

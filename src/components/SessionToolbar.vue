@@ -26,7 +26,7 @@ async function getPartitions() {
 
 await getPartitions();
 
-const unListen = await listen("authorize_device", async (event: any) => {
+const unListen = await listen("authorize_device", async (event) => {
   console.log("authorize_device event received", event.payload);
 });
 
@@ -42,15 +42,48 @@ onBeforeUnmount(() => {
   checkToken.value = null;
 });
 
+interface DeviceAuthStateBase {
+  type: string;
+}
+
+interface NeedsConfirmationState extends DeviceAuthStateBase {
+  type: "NeedsConfirmation";
+  partition: string;
+  user_code: string;
+  device_code: string;
+  confirmation_url: string;
+  polling_interval: number;
+  expires_at: number;
+}
+
+interface NeedsRefreshState extends DeviceAuthStateBase {
+  type: "NeedsRefresh";
+}
+
+interface SuccessState extends DeviceAuthStateBase {
+  type: "Success";
+  expires_at: number;
+}
+
+interface PendingState extends DeviceAuthStateBase {
+  type: "Pending";
+}
+
+// union type matching DeviceAuthState in login.rs
+type DeviceAuthState =
+  | NeedsConfirmationState
+  | NeedsRefreshState
+  | SuccessState
+  | PendingState;
+
 async function tryAuth(partition: string) {
-  let payload: object;
+  let payload: DeviceAuthState;
   try {
     console.log("Sending authorize_device");
     payload = await invoke("authorize_device", {
       authEvent: { partition_name: partition },
     });
     console.log("received authorize_device:", payload);
-    // @ts-expect-error
     if (payload.type !== "Success") {
       sendNotification({
         // @ts-expect-error
@@ -64,9 +97,9 @@ async function tryAuth(partition: string) {
     snackbarMessage.value = `Failed to authenticate for ${partition}: ${e}`;
     return;
   }
-  if ((payload as any).type == "Success") {
-    store.$patch({ expires_at: new Date((payload as any).expires_at) });
-  } else if ((payload as any).type == "NeedsConfirmation") {
+  if (payload.type === "Success") {
+    store.$patch({ expires_at: new Date(payload.expires_at) });
+  } else if (payload.type === "NeedsConfirmation") {
     console.log("NeedsConfirmation received", payload);
     store.confirmation = payload as Confirmation;
     await open(store.confirmation.confirmation_url);

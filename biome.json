@@ -13,7 +13,8 @@
       "**/*.toml",
       "dist/**",
       "node_modules/**",
-      "target/**"
+      "target/**",
+      "vite*.ts"
     ]
   },
   "formatter": {

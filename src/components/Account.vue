@@ -78,7 +78,8 @@ onMounted(async () => {
 function roleCmp(a: Role, b: Role): number {
   if ((a.alias || a.role_name) > (b.alias || b.role_name)) {
     return 1;
-  } else if ((a.alias || a.role_name) < (b.alias || b.role_name)) {
+  }
+  if ((a.alias || a.role_name) < (b.alias || b.role_name)) {
     return -1;
   }
   return 0;
