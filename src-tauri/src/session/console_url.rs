@@ -8,14 +8,6 @@ use crate::configuration::Partition;
 const AWS_DOMAIN: &str = "aws.amazon.com";
 
 #[derive(serde::Serialize, Debug)]
-struct SignInTokenRequest {
-    #[serde(rename = "Action")]
-    action: String,
-    #[serde(rename = "Session")]
-    session: SignInTokenRequestSession,
-}
-
-#[derive(serde::Serialize, Debug)]
 struct SignInTokenRequestSession {
     #[serde(rename = "sessionId")]
     session_id: String,
